@@ -25,11 +25,18 @@ import org.codehaus.jackson.map.ObjectMapper;
 /**
  * Assertions for comparing JSON. The comparison ignores white-spaces and order of nodes.
  * @author Lukas Krecan
+ * @author Jan Marcis
  *
  */
  public class JsonAssert {
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    public static final String PLACE_HOLDER_IGNORE_VALUE = "@@IGNORE_VALUE";
+
+    public static final String PLACE_HOLDER_ANY_STRING = "@@ANY_STRING";
+
+    public static final String PLACE_HOLDER_ANY_NUMBER = "@@ANY_NUMBER";
 
 	private JsonAssert(){
 		//nothing
@@ -72,7 +79,10 @@ import org.codehaus.jackson.map.ObjectMapper;
 	 */
 	public static void assertJsonPartEquals(JsonNode expected, JsonNode fullJson, String path) {
 		Diff diff = new Diff(expected, fullJson, path);
-		if (!diff.similar()) {
+        Diff.IGNORE_VALUE_CONSTANT = PLACE_HOLDER_IGNORE_VALUE;
+        Diff.ANY_NUMBER_CONSTANT = PLACE_HOLDER_ANY_NUMBER;
+        Diff.ANY_STRING_CONSTANT = PLACE_HOLDER_ANY_STRING;
+        if (!diff.similar()) {
 			doFail(diff.toString());
 		}
 	}
@@ -140,7 +150,10 @@ import org.codehaus.jackson.map.ObjectMapper;
 	 */
 	public static void assertJsonPartStructureEquals(JsonNode expected, JsonNode fullJson, String path) {
 		Diff diff = new Diff(expected, fullJson, path);
-		if (!diff.similarStructure()) {
+        Diff.IGNORE_VALUE_CONSTANT = PLACE_HOLDER_IGNORE_VALUE;
+        Diff.ANY_NUMBER_CONSTANT = PLACE_HOLDER_ANY_NUMBER;
+        Diff.ANY_STRING_CONSTANT = PLACE_HOLDER_ANY_STRING;
+        if (!diff.similarStructure()) {
 			doFail(diff.structureDifferences());
 		}
 	}

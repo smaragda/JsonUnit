@@ -395,4 +395,26 @@ public class JsonAssertTest {
 			assertEquals("JSON documents have different structures:\nArray \"\" has different length. Expected 2, got 3.\n", e.getMessage());
 		}
 	}
+
+    @Test
+    public void testValueEqualsIgnoreValue() throws Exception {
+        assertJsonEquals("{\"foo\":\"@@IGNORE_VALUE\",\"test\": 1}", "{\n\"test\": 1,\n\"foo\":\"bar\"}");
+    }
+
+    @Test
+    public void testValueEqualsIgnoreValuesDiffTypes() throws Exception {
+        assertJsonEquals("{\"foo\":\"@@IGNORE_VALUE\",\"test\":\"@@IGNORE_VALUE\"}", "{\n\"test\": 1,\n\"foo\":\"bar\"}");
+    }
+
+    @Test
+    public void testAnyNumber() throws Exception {
+        assertJsonEquals("{\"foo\":\"bar\",\"test\": \"@@ANY_NUMBER\"}", "{\n\"test\": 1,\n\"foo\":\"bar\"}");
+
+        try {
+            assertJsonEquals("{\"foo\":\"@@ANY_NUMBER\",\"test\": 1}", "{\n\"test\": 1,\n\"foo\":\"bar\"}");
+        } catch (AssertionError e) {
+            assertEquals("JSON documents have different values:\n" +
+                    "Different values found in node \"foo\". Expected '\"@@ANY_NUMBER\"', got '\"bar\"'.", e.getMessage().trim());
+        }
+    }
 }

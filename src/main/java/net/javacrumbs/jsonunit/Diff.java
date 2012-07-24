@@ -37,16 +37,21 @@ import org.codehaus.jackson.node.ObjectNode;
 /**
  * Compares JSON structures.
  * @author Lukas Krecan
+ * @author Jan Marcis
  *
  */
 class Diff {
 	private static final Pattern ARRAY_PATTERN = Pattern.compile("(\\w+)\\[(\\d+)\\]");
-	private final JsonNode expectedRoot;
-	private final JsonNode actualRoot;
-	private final Differences structureDifferences = new Differences("structures");
-	private final Differences valueDifferences = new Differences("values");
-	private final String startPath;
-	private boolean compared = false;
+    private static final String SAME_VALUE = "JSON documents have the same value.";
+    private final JsonNode expectedRoot;
+    private final JsonNode actualRoot;
+    private final Differences structureDifferences = new Differences("structures");
+    private final Differences valueDifferences = new Differences("values");
+    private final String startPath;
+    private boolean compared = false;
+    static String IGNORE_VALUE_CONSTANT;
+    static String ANY_STRING_CONSTANT;
+    static String ANY_NUMBER_CONSTANT;
 
 	private enum NodeType {OBJECT, ARRAY, STRING, NUMBER, BOOLEAN, NULL};
 
@@ -58,8 +63,7 @@ class Diff {
 	}
 
 
-
-	private void compare() {
+    private void compare() {
 		if ( ! compared) {
 			JsonNode part = getStartNode(actualRoot, startPath);
 			if (part.isMissingNode()) {
@@ -123,11 +127,21 @@ class Diff {
 	 * @param fieldPath
 	 */
 	private void compareNodes(JsonNode expectedNode, JsonNode actualNode, String fieldPath) {
-		NodeType expectedNodeType = getNodeType(expectedNode);
+        NodeType phNodeType = getExpectedNodeTypeFromPlaceHolder(expectedNode);
+
+		NodeType expectedNodeType = phNodeType == null ? getNodeType(expectedNode) : phNodeType;
 		NodeType actualNodeType = getNodeType(actualNode);
+        // do not compare type and value for ignore-placeholder
+        if(NodeType.STRING.equals(expectedNodeType) && expectedNode.getTextValue().equals(IGNORE_VALUE_CONSTANT)) {
+            return;
+        }
 		if (!expectedNodeType.equals(actualNodeType)) {
+            // I would expect different type message here, not different values...
 			valueDifferenceFound("Different values found in node \"%s\". Expected '%s', got '%s'.", fieldPath, expectedNode, actualNode);
 		} else {
+            // do not compare value for ANY_ placeholders
+            if(phNodeType != null) return;
+
 			switch (expectedNodeType) {
 				case OBJECT:
 					compareObjectNodes((ObjectNode)expectedNode, (ObjectNode)actualNode, fieldPath);
@@ -153,13 +167,38 @@ class Diff {
 		}
 	}
 
+    private NodeType getExpectedNodeTypeFromPlaceHolder(JsonNode expectedNode) {
+        // placeholders are only Strings
+        if(!NodeType.STRING.equals(getNodeType(expectedNode))) return null;
+
+        if(ANY_NUMBER_CONSTANT.equals(expectedNode.getTextValue())) {
+            return NodeType.NUMBER;
+        } else if(ANY_STRING_CONSTANT.equals(expectedNode.getTextValue())) {
+            return NodeType.STRING;
+        }
+        return null;
+    }
+
 
 
 	private void compareValues(Object expectedValue, Object actualValue, String path) {
+        // do not compare values for placeholders
+        if(isPlaceHolder(expectedValue)) return;
+
 		if (!expectedValue.equals(actualValue)) {
 			valueDifferenceFound("Different value found in node \"%s\". Expected %s, got %s.", path, expectedValue, actualValue);
 		}
 	}
+
+    private boolean isPlaceHolder(Object value) {
+        // placeholders are strings
+        if(!(value instanceof String)) return false;
+
+        String string = (String) value;
+        if(ANY_NUMBER_CONSTANT.equals(string)) return true;
+        if(ANY_STRING_CONSTANT.equals(string)) return true;
+        return false;
+    }
 
 
 	private void compareArrayNodes(ArrayNode expectedNode, ArrayNode actualNode, String path) {
@@ -184,34 +223,32 @@ class Diff {
 	}
 
 
+    /**
+     * Returns NodeType of the node.
+     *
+     * @param node
+     * @return
+     */
+    private NodeType getNodeType(JsonNode node) {
+        if (node.isObject()) {
+            return NodeType.OBJECT;
+        } else if (node.isArray()) {
+            return NodeType.ARRAY;
+        } else if (node.isTextual()) {
+            return NodeType.STRING;
+        } else if (node.isNumber()) {
+            return NodeType.NUMBER;
+        } else if (node.isBoolean()) {
+            return NodeType.BOOLEAN;
+        } else if (node.isNull()) {
+            return NodeType.NULL;
+        } else {
+            throw new IllegalStateException("Unexpected node type " + node);
+        }
+    }
 
 
-	/**
-	 * Returns NodeType of the node.
-	 * @param node
-	 * @return
-	 */
-	private NodeType getNodeType(JsonNode node){
-		if (node.isObject()) {
-			return NodeType.OBJECT;
-		} else if (node.isArray()) {
-			return NodeType.ARRAY;
-		} else if (node.isTextual()) {
-			return NodeType.STRING;
-		} else if (node.isNumber()) {
-			return NodeType.NUMBER;
-		} else if (node.isBoolean()) {
-			return NodeType.BOOLEAN;
-		} else if (node.isNull()) {
-			return NodeType.NULL;
-		} else {
-			throw new IllegalStateException("Unexpected node type "+node);
-		}
-	}
-
-
-
-	/**
+    /**
 	 * Construct path to an element.
 	 * @param parent
 	 * @param name
@@ -227,7 +264,7 @@ class Diff {
 
 	/**
 	 * Constructs path to an array element.
-	 * @param path
+	 * @param parent
 	 * @param i
 	 * @return
 	 */
@@ -290,7 +327,7 @@ class Diff {
 
 	public String differences() {
 		if (similar()) {
-		    return "JSON documents have the same value.";
+		    return SAME_VALUE;
 		}
 		StringBuilder message = new StringBuilder();
 		structureDifferences.appendDifferences(message);
@@ -300,7 +337,7 @@ class Diff {
 
 	public String valueDifferences() {
 		if (similarStructure()) {
-		    return "JSON documents have the same value.";
+		    return SAME_VALUE;
 		}
 		StringBuilder message = new StringBuilder();
 		valueDifferences.appendDifferences(message);
