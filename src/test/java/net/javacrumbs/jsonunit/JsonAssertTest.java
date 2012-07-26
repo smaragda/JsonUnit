@@ -417,4 +417,14 @@ public class JsonAssertTest {
                     "Different values found in node \"foo\". Expected '\"@@ANY_NUMBER\"', got '\"bar\"'.", e.getMessage().trim());
         }
     }
+
+    @Test
+    public void testDatePlaceholder() throws Exception {
+        assertJsonEquals("{\"foo\":\"@@ANY_DATE\",\"test\":1}", "{\n\"test\": 1,\n\"foo\":\"2012-07-26 14:45:00\"}");
+    }
+
+    @Test
+    public void testDatePlaceholderBadDate() throws Exception {
+        assertJsonEquals("{\"foo\":\"@@ANY_DATE\",\"test\":1}", "{\n\"test\": 1,\n\"foo\":\"2012-07-26 iparseable date\"}");
+    }
 }

@@ -15,17 +15,10 @@
  */
 package net.javacrumbs.jsonunit;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.StringTokenizer;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,8 +45,10 @@ class Diff {
     static String IGNORE_VALUE_CONSTANT;
     static String ANY_STRING_CONSTANT;
     static String ANY_NUMBER_CONSTANT;
+    static String ANY_DATE_CONSTANT;
+    public static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
-	private enum NodeType {OBJECT, ARRAY, STRING, NUMBER, BOOLEAN, NULL};
+	private enum NodeType {OBJECT, ARRAY, STRING, NUMBER, BOOLEAN, NULL, DATE};
 
 	public Diff(JsonNode expected, JsonNode actual, String startPath) {
 		super();
@@ -131,6 +126,10 @@ class Diff {
 
 		NodeType expectedNodeType = phNodeType == null ? getNodeType(expectedNode) : phNodeType;
 		NodeType actualNodeType = getNodeType(actualNode);
+        // NodeType DATE is subtype of String
+        if(NodeType.STRING.equals(actualNodeType) && isDate(actualNode.getTextValue())) {
+            actualNodeType = NodeType.DATE;
+        }
         // do not compare type and value for ignore-placeholder
         if(NodeType.STRING.equals(expectedNodeType) && expectedNode.getTextValue().equals(IGNORE_VALUE_CONSTANT)) {
             return;
@@ -161,11 +160,24 @@ class Diff {
 				case NULL:
 					//nothing
 					break;
+                case DATE:
+                    // nothing
+                    break;
 				default:
 					throw new IllegalStateException("Unexpected node type "+expectedNodeType);
 			}
 		}
 	}
+
+    private boolean isDate(String nodeTextValue) {
+        SimpleDateFormat format = new SimpleDateFormat(DATE_TIME_FORMAT);
+        try {
+            format.parse(nodeTextValue);  // do not need the value
+            return true;
+        } catch (ParseException e) {
+            return false;
+        }
+    }
 
     private NodeType getExpectedNodeTypeFromPlaceHolder(JsonNode expectedNode) {
         // placeholders are only Strings
@@ -175,6 +187,8 @@ class Diff {
             return NodeType.NUMBER;
         } else if(ANY_STRING_CONSTANT.equals(expectedNode.getTextValue())) {
             return NodeType.STRING;
+        } else if(ANY_DATE_CONSTANT.equals(expectedNode.getTextValue())) {
+            return NodeType.DATE;
         }
         return null;
     }

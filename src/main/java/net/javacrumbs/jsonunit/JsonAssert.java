@@ -32,11 +32,25 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /**
+     * Field must be present, but type and value does not matter.
+     */
     public static final String PLACE_HOLDER_IGNORE_VALUE = "@@IGNORE_VALUE";
 
+    /**
+     * Must be a string, but does not matter what.
+     */
     public static final String PLACE_HOLDER_ANY_STRING = "@@ANY_STRING";
 
+    /**
+     *  Must be a number, but can have any value
+     */
     public static final String PLACE_HOLDER_ANY_NUMBER = "@@ANY_NUMBER";
+
+    /**
+     * Must be a date, but does not matter what.
+     */
+    public static final String PLACE_HOLDER_ANY_DATE = "@@ANY_DATE";
 
 	private JsonAssert(){
 		//nothing
@@ -82,6 +96,7 @@ import org.codehaus.jackson.map.ObjectMapper;
         Diff.IGNORE_VALUE_CONSTANT = PLACE_HOLDER_IGNORE_VALUE;
         Diff.ANY_NUMBER_CONSTANT = PLACE_HOLDER_ANY_NUMBER;
         Diff.ANY_STRING_CONSTANT = PLACE_HOLDER_ANY_STRING;
+        Diff.ANY_DATE_CONSTANT = PLACE_HOLDER_ANY_DATE;
         if (!diff.similar()) {
 			doFail(diff.toString());
 		}
